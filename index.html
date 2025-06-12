@@ -54,45 +54,47 @@
       form.innerHTML = "Načítání dat...";
       show("page-rating");
 
-      const { data, error } = await supabase
-        .from('ratings')
-        .select('*')
-        .eq('trida', selectedClass)
-        .eq('hodnotitel', selectedEvaluator);
+      try {
+        const res = await supabase
+          .from('ratings')
+          .select('*')
+          .eq('trida', selectedClass)
+          .eq('hodnotitel', selectedEvaluator);
 
-      if (error) {
-        form.innerHTML = `<p class="error">Chyba při načítání dat: ${error.message}</p>`;
-        return;
-      }
+        if (res.error) throw res.error;
+        if (!res.data) throw new Error("Data nenalezena nebo nepřišla ze serveru.");
 
-      const existingRatings = {};
-      data.forEach(row => { existingRatings[row.zaktarget] = row.hodnoceni; });
+        const existingRatings = {};
+        res.data.forEach(row => { existingRatings[row.zaktarget] = row.hodnoceni; });
 
-      form.innerHTML = "";
-      students[selectedClass].forEach(student => {
-        const div = document.createElement("div");
-        const label = document.createElement("label");
-        label.textContent = student;
-        const select = document.createElement("select");
-        ratings.forEach(val => {
-          const option = document.createElement("option");
-          option.value = val;
-          option.textContent = val || "--";
-          select.appendChild(option);
+        form.innerHTML = "";
+        students[selectedClass].forEach(student => {
+          const div = document.createElement("div");
+          const label = document.createElement("label");
+          label.textContent = student;
+          const select = document.createElement("select");
+          ratings.forEach(val => {
+            const option = document.createElement("option");
+            option.value = val;
+            option.textContent = val || "--";
+            select.appendChild(option);
+          });
+          select.value = existingRatings[student] || "";
+          select.id = `rating-${student}`;
+          div.appendChild(label);
+          div.appendChild(select);
+          form.appendChild(div);
         });
-        select.value = existingRatings[student] || "";
-        select.id = `rating-${student}`;
-        div.appendChild(label);
-        div.appendChild(select);
-        form.appendChild(div);
-      });
+      } catch (err) {
+        form.innerHTML = `<p class='error'>Chyba při načítání: ${err.message}</p>`;
+        console.error("Chyba při načítání dat:", err);
+      }
     }
 
     window.saveRatings = async function() {
       for (const student of students[selectedClass]) {
         const val = document.getElementById(`rating-${student}`).value;
 
-        // Delete if empty
         if (!val) {
           await supabase
             .from('ratings')
@@ -101,7 +103,6 @@
           continue;
         }
 
-        // Upsert (insert or update)
         await supabase
           .from('ratings')
           .upsert({
