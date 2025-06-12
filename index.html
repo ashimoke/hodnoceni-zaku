@@ -81,7 +81,7 @@
             select.appendChild(option);
           });
           select.value = existingRatings[student] !== undefined ? Number(existingRatings[student]).toFixed(1) : "";
-          select.id = `rating-${student}`
+          select.id = `rating-${student}`;
           div.appendChild(label);
           div.appendChild(select);
           form.appendChild(div);
@@ -98,8 +98,9 @@
 
       for (const student of students[selectedClass]) {
         const val = document.getElementById(`rating-${student}`).value;
+        const parsed = parseFloat(val);
 
-        if (!val) {
+        if (!val || isNaN(parsed)) {
           toDelete.push({
             trida: selectedClass,
             hodnotitel: selectedEvaluator,
@@ -108,18 +109,11 @@
           continue;
         }
 
-if (!val || isNaN(parseFloat(val))) {
-  // smazat záznam
-} else {
-  const numericVal = parseFloat(val);
-  // uložit jako číslo
-}
-        
         newRatings.push({
           trida: selectedClass,
           hodnotitel: selectedEvaluator,
           zaktarget: student,
-          hodnoceni: numericVal
+          hodnoceni: parsed
         });
       }
 
@@ -188,7 +182,7 @@ if (!val || isNaN(parseFloat(val))) {
 </head>
 <body>
 <div class="container">
-  <h1>Hodnocení žáků – verze 5</h1>
+  <h1>Hodnocení žáků – verze 6</h1>
 
   <div id="page-start">
     <h2>Zvolte třídu</h2>
