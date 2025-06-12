@@ -12,10 +12,9 @@
     th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
     .container { max-width: 600px; margin: auto; }
   </style>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, get, set, update, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyANTSML9E5qQq03Uudx2dDDXE1nzJ6S_t8",
       authDomain: "hodnoceni-zaku.firebaseapp.com",
@@ -26,8 +25,8 @@
       appId: "1:1032440821418:web:6f3d816f8cd04d9d2382d3"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
     const evaluators = ["Hrubeš", "Horák", "Kubelka", "Mrázik", "Uher"].sort();
     const students = {
@@ -50,42 +49,42 @@
       evaluators.forEach(name => {
         const btn = document.createElement("button");
         btn.textContent = name;
-        btn.onclick = () => selectEvaluator(name);
+        btn.onclick = function () { selectEvaluator(name); };
         container.appendChild(btn);
       });
       show("page-select-evaluator");
     }
 
-    async function selectEvaluator(name) {
+    function selectEvaluator(name) {
       selectedEvaluator = name;
       document.getElementById("rating-title").textContent = `Hodnocení žáků třídy ${selectedClass} hodnotitelem ${name}`;
       const form = document.getElementById("rating-form");
       form.innerHTML = "";
-      const snapshot = await get(ref(db, `ratings/${selectedClass}`));
-      const classData = snapshot.exists() ? snapshot.val() : {};
-
-      students[selectedClass].forEach(student => {
-        const div = document.createElement("div");
-        const label = document.createElement("label");
-        label.textContent = student;
-        const select = document.createElement("select");
-        ratings.forEach(val => {
-          const option = document.createElement("option");
-          option.value = val;
-          option.textContent = val || "--";
-          select.appendChild(option);
+      db.ref(`ratings/${selectedClass}`).once("value", snapshot => {
+        const classData = snapshot.val() || {};
+        students[selectedClass].forEach(student => {
+          const div = document.createElement("div");
+          const label = document.createElement("label");
+          label.textContent = student;
+          const select = document.createElement("select");
+          ratings.forEach(val => {
+            const option = document.createElement("option");
+            option.value = val;
+            option.textContent = val || "--";
+            select.appendChild(option);
+          });
+          const saved = classData[student]?.[selectedEvaluator] || "";
+          if (saved) select.value = saved;
+          select.id = `rating-${student}`;
+          div.appendChild(label);
+          div.appendChild(select);
+          form.appendChild(div);
         });
-        const saved = classData?.[student]?.[selectedEvaluator] || "";
-        if (saved) select.value = saved;
-        select.id = `rating-${student}`;
-        div.appendChild(label);
-        div.appendChild(select);
-        form.appendChild(div);
+        show("page-rating");
       });
-      show("page-rating");
     }
 
-    window.saveRatings = async function() {
+    window.saveRatings = function() {
       const updates = {};
       students[selectedClass].forEach(student => {
         const val = document.getElementById(`rating-${student}`).value;
@@ -96,41 +95,47 @@
           updates[path] = null;
         }
       });
-      await update(ref(db), updates);
-      alert("Hodnocení uloženo.");
+      db.ref().update(updates, function(error) {
+        if (error) {
+          alert("Chyba při ukládání: " + error.message);
+        } else {
+          alert("Hodnocení uloženo.");
+        }
+      });
     }
 
-    window.goToResults = async function() {
-      const snapshot = await get(ref(db, "ratings"));
-      const all = snapshot.exists() ? snapshot.val() : {};
-      const div = document.getElementById("results-table");
-      div.innerHTML = "";
-      Object.keys(students).forEach(cls => {
-        const clsHeader = document.createElement("h3");
-        clsHeader.textContent = `Třída ${cls}`;
-        div.appendChild(clsHeader);
-        const table = document.createElement("table");
-        const thead = table.insertRow();
-        ["Žák", "Průměr", "Hodnotili"].forEach(t => thead.insertCell().textContent = t);
-        students[cls].forEach(student => {
-          const row = table.insertRow();
-          const data = all?.[cls]?.[student] || {};
-          const values = Object.values(data).map(Number);
-          const avg = values.length ? (values.reduce((a,b)=>a+b,0)/values.length).toFixed(2) : "--";
-          row.insertCell().textContent = student;
-          row.insertCell().textContent = avg;
-          row.insertCell().textContent = Object.keys(data).join(", ");
+    window.goToResults = function() {
+      db.ref("ratings").once("value", snapshot => {
+        const all = snapshot.val() || {};
+        const div = document.getElementById("results-table");
+        div.innerHTML = "";
+        Object.keys(students).forEach(cls => {
+          const clsHeader = document.createElement("h3");
+          clsHeader.textContent = `Třída ${cls}`;
+          div.appendChild(clsHeader);
+          const table = document.createElement("table");
+          const thead = table.insertRow();
+          ["Žák", "Průměr", "Hodnotili"].forEach(t => thead.insertCell().textContent = t);
+          students[cls].forEach(student => {
+            const row = table.insertRow();
+            const data = all?.[cls]?.[student] || {};
+            const values = Object.values(data).map(Number);
+            const avg = values.length ? (values.reduce((a,b)=>a+b,0)/values.length).toFixed(2) : "--";
+            row.insertCell().textContent = student;
+            row.insertCell().textContent = avg;
+            row.insertCell().textContent = Object.keys(data).join(", ");
+          });
+          div.appendChild(table);
         });
-        div.appendChild(table);
+        show("page-results");
       });
-      show("page-results");
     }
 
     window.goToStart = function() {
       show("page-start");
     }
 
-    show("page-start");
+    document.addEventListener("DOMContentLoaded", () => show("page-start"));
   </script>
 </head>
 <body>
