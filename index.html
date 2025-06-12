@@ -11,10 +11,11 @@
     table { width: 100%; border-collapse: collapse; margin-top: 1em; }
     th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
     .container { max-width: 800px; margin: auto; }
-    .rating-group { display: flex; flex-direction: column; margin-bottom: 1em; }
-    .rating-row { display: flex; align-items: center; gap: 0.5em; flex-wrap: wrap; }
-    .rating-row label { flex: 1 0 100px; font-weight: bold; }
-    .rating-row .category { font-size: 0.8em; text-align: center; }
+    .rating-group { display: flex; flex-direction: column; margin-bottom: 1.5em; }
+    .student-name { font-weight: bold; margin-bottom: 0.5em; }
+    .rating-row { display: flex; gap: 0.5em; flex-wrap: wrap; justify-content: flex-start; }
+    .rating-cell { display: flex; flex-direction: column; align-items: center; min-width: 60px; }
+    .rating-cell .category { font-size: 0.75em; text-align: center; margin-bottom: 0.2em; }
     .error { color: red; font-weight: bold; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -78,23 +79,22 @@
           const group = document.createElement("div");
           group.className = "rating-group";
 
+          const name = document.createElement("div");
+          name.className = "student-name";
+          name.textContent = student;
+          group.appendChild(name);
+
           const row = document.createElement("div");
           row.className = "rating-row";
 
-          const label = document.createElement("label");
-          label.textContent = student;
-          row.appendChild(label);
-
           categories.forEach(cat => {
-            const wrapper = document.createElement("div");
-            wrapper.style.display = "flex";
-            wrapper.style.flexDirection = "column";
-            wrapper.style.alignItems = "center";
+            const cell = document.createElement("div");
+            cell.className = "rating-cell";
 
             const span = document.createElement("span");
             span.className = "category";
             span.textContent = cat;
-            wrapper.appendChild(span);
+            cell.appendChild(span);
 
             const select = document.createElement("select");
             select.id = `rating-${student}-${cat}`;
@@ -107,8 +107,8 @@
             if (existingRatings[student] && existingRatings[student][cat] !== null) {
               select.value = Number(existingRatings[student][cat]).toFixed(1);
             }
-            wrapper.appendChild(select);
-            row.appendChild(wrapper);
+            cell.appendChild(select);
+            row.appendChild(cell);
           });
 
           group.appendChild(row);
@@ -157,6 +157,10 @@
 
       alert("Hodnocení uloženo.");
     }
+
+    window.goToResults = function () {
+      alert("Zobrazit výsledky – funkce ještě není implementována ve verzi 7");
+    }
   </script>
 </head>
 <body>
@@ -178,6 +182,7 @@
     <h2 id="rating-title"></h2>
     <div id="rating-form"></div>
     <button onclick="saveRatings()">Uložit hodnocení</button>
+    <button onclick="goToResults()">Zobrazit výsledky</button>
   </div>
 </div>
 </body>
