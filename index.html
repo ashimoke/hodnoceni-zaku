@@ -61,6 +61,7 @@
       document.getElementById("rating-title").textContent = `Hodnocení žáků třídy ${selectedClass} hodnotitelem ${name}`;
       const form = document.getElementById("rating-form");
       form.innerHTML = "Načítání dat...";
+      show("page-rating");
 
       db.ref(`ratings/${selectedClass}`).once("value")
         .then(snapshot => {
@@ -84,7 +85,6 @@
             div.appendChild(select);
             form.appendChild(div);
           });
-          show("page-rating");
         })
         .catch(error => {
           form.innerHTML = `<p class="error">Chyba při načítání dat: ${error.message}</p>`;
