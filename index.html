@@ -93,43 +93,49 @@
     }
 
     window.saveRatings = async function() {
+      const newRatings = [];
+      const toDelete = [];
+
       for (const student of students[selectedClass]) {
         const val = document.getElementById(`rating-${student}`).value;
 
         if (!val) {
-          const { error } = await supabase
-            .from('ratings')
-            .delete()
-            .match({ trida: selectedClass, hodnotitel: selectedEvaluator, zaktarget: student });
-
-          if (error) {
-            console.error(`Chyba při mazání záznamu pro ${student}: ${error.message || JSON.stringify(error)}`);
-          } else {
-            console.log(`Záznam pro ${student} byl smazán.`);
-          }
+          toDelete.push({
+            trida: selectedClass,
+            hodnotitel: selectedEvaluator,
+            zaktarget: student
+          });
           continue;
         }
 
         const numericVal = parseFloat(val);
-        const payload = {
+        newRatings.push({
           trida: selectedClass,
           hodnotitel: selectedEvaluator,
           zaktarget: student,
           hodnoceni: numericVal
-        };
+        });
+      }
 
-        console.log("Odesílám do Supabase:", payload);
-
+      for (const del of toDelete) {
         const { error } = await supabase
           .from('ratings')
-          .upsert(payload);
-
+          .delete()
+          .match(del);
         if (error) {
-          console.error(`Chyba při ukládání záznamu pro ${student}: ${error.message || JSON.stringify(error)}`);
-        } else {
-          console.log(`OK: Záznam pro ${student} uložen.`);
+          console.error(`Chyba při mazání záznamu:`, error.message || JSON.stringify(error));
         }
       }
+
+      if (newRatings.length > 0) {
+        const { error } = await supabase
+          .from('ratings')
+          .upsert(newRatings);
+        if (error) {
+          console.error(`Chyba při ukládání hodnocení:`, error.message || JSON.stringify(error));
+        }
+      }
+
       alert("Hodnocení uloženo.");
     }
 
