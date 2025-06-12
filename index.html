@@ -96,21 +96,34 @@
         const val = document.getElementById(`rating-${student}`).value;
 
         if (!val) {
-          await supabase
+          const { error } = await supabase
             .from('ratings')
             .delete()
             .match({ trida: selectedClass, hodnotitel: selectedEvaluator, zaktarget: student });
+
+          if (error) {
+            console.error(`Chyba při mazání záznamu pro ${student}:`, error);
+          } else {
+            console.log(`Záznam pro ${student} byl smazán.`);
+          }
           continue;
         }
 
-        await supabase
+        const numericVal = parseFloat(val);
+        const { error } = await supabase
           .from('ratings')
           .upsert({
             trida: selectedClass,
             hodnotitel: selectedEvaluator,
             zaktarget: student,
-            hodnoceni: val
+            hodnoceni: numericVal
           });
+
+        if (error) {
+          console.error(`Chyba při ukládání záznamu pro ${student}:`, error);
+        } else {
+          console.log(`Záznam pro ${student} uložen s hodnotou: ${numericVal}`);
+        }
       }
       alert("Hodnocení uloženo.");
     }
