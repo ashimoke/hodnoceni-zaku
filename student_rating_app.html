@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hodnocení žáků</title>
+  <style>
+    body { font-family: sans-serif; padding: 1em; }
+    button, select { margin: 0.5em 0; font-size: 1em; padding: 0.5em; width: 100%; }
+    .hidden { display: none; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
+    .container { max-width: 600px; margin: auto; }
+    .error { color: red; font-weight: bold; }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyANTSML9E5qQq03Uudx2dDDXE1nzJ6S_t8",
+      authDomain: "hodnoceni-zaku.firebaseapp.com",
+      databaseURL: "https://hodnoceni-zaku-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "hodnoceni-zaku",
+      storageBucket: "hodnoceni-zaku.firebasestorage.app",
+      messagingSenderId: "1032440821418",
+      appId: "1:1032440821418:web:6f3d816f8cd04d9d2382d3"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const evaluators = ["Hrubeš", "Horák", "Kubelka", "Mrázik", "Uher"].sort();
+    const students = {
+      "3.N": ["Jakubíková", "Kasho", "Kašparcová", "Kotásková", "Marková", "Mórová", "Nespjaková", "Olšák", "Poláčková", "Šmíd", "Vaňousová", "Zelyczová"].sort(),
+      "2.DN": ["Bláhová", "Bukovský", "Eisnerová", "Foryová", "Holienková", "Janatková", "Kodad", "Košata", "Matějíková", "Matys", "Nováková", "Otradovcová", "Vokalová"].sort(),
+    };
+    const ratings = ["", "1.0", "1.5", "2.0", "2.5", "3.0", "3.5", "4.0", "4.5", "5.0"];
+    let selectedClass = "";
+    let selectedEvaluator = "";
+
+    function show(id) {
+      document.querySelectorAll("#page-start, #page-select-evaluator, #page-rating, #page-results").forEach(e => e.classList.add("hidden"));
+      document.getElementById(id).classList.remove("hidden");
+    }
+
+    window.selectClass = function(cls) {
+      selectedClass = cls;
+      const container = document.getElementById("evaluator-buttons");
+      container.innerHTML = "";
+      evaluators.forEach(name => {
+        const btn = document.createElement("button");
+        btn.textContent = name;
+        btn.onclick = function () { selectEvaluator(name); };
+        container.appendChild(btn);
+      });
+      show("page-select-evaluator");
+    }
+
+    function selectEvaluator(name) {
+      selectedEvaluator = name;
+      document.getElementById("rating-title").textContent = `Hodnocení žáků třídy ${selectedClass} hodnotitelem ${name}`;
+      const form = document.getElementById("rating-form");
+      form.innerHTML = "Načítání dat...";
+      show("page-rating");
+
+      db.ref(`ratings/${selectedClass}`).once("value")
+        .then(snapshot => {
+          const classData = snapshot.val() || {};
+          form.innerHTML = "";
+          students[selectedClass].forEach(student => {
+            const div = document.createElement("div");
+            const label = document.createElement("label");
+            label.textContent = student;
+            const select = document.createElement("select");
+            ratings.forEach(val => {
+              const option = document.createElement("option");
+              option.value = val;
+              option.textContent = val || "--";
+              select.appendChild(option);
+            });
+            const saved = classData[student]?.[selectedEvaluator] || "";
+            if (saved) select.value = saved;
+            select.id = `rating-${student}`;
+            div.appendChild(label);
+            div.appendChild(select);
+            form.appendChild(div);
+          });
+        })
+        .catch(error => {
+          form.innerHTML = `<p class="error">Chyba při načítání dat: ${error.message}</p>`;
+        });
+    }
+
+    window.saveRatings = function() {
+      const updates = {};
+      students[selectedClass].forEach(student => {
+        const val = document.getElementById(`rating-${student}`).value;
+        const path = `ratings/${selectedClass}/${student}/${selectedEvaluator}`;
+        if (val) {
+          updates[path] = val;
+        } else {
+          updates[path] = null;
+        }
+      });
+      db.ref().update(updates, function(error) {
+        if (error) {
+          alert("Chyba při ukládání: " + error.message);
+        } else {
+          alert("Hodnocení uloženo.");
+        }
+      });
+    }
+
+    window.goToResults = function() {
+      db.ref("ratings").once("value", snapshot => {
+        const all = snapshot.val() || {};
+        const div = document.getElementById("results-table");
+        div.innerHTML = "";
+        Object.keys(students).forEach(cls => {
+          const clsHeader = document.createElement("h3");
+          clsHeader.textContent = `Třída ${cls}`;
+          div.appendChild(clsHeader);
+          const table = document.createElement("table");
+          const thead = table.insertRow();
+          ["Žák", "Průměr", "Hodnotili"].forEach(t => thead.insertCell().textContent = t);
+          students[cls].forEach(student => {
+            const row = table.insertRow();
+            const data = all?.[cls]?.[student] || {};
+            const values = Object.values(data).map(Number);
+            const avg = values.length ? (values.reduce((a,b)=>a+b,0)/values.length).toFixed(2) : "--";
+            row.insertCell().textContent = student;
+            row.insertCell().textContent = avg;
+            row.insertCell().textContent = Object.keys(data).join(", ");
+          });
+          div.appendChild(table);
+        });
+        show("page-results");
+      });
+    }
+
+    window.goToStart = function() {
+      show("page-start");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => show("page-start"));
+  </script>
+</head>
+<body>
+<div class="container">
+  <div id="page-start">
+    <h2>Zvolte třídu</h2>
+    <button onclick="selectClass('3.N')">3.N</button>
+    <button onclick="selectClass('2.DN')">2.DN</button>
+  </div>
+
+  <div id="page-select-evaluator" class="hidden">
+    <h2>Zvolte hodnotícího</h2>
+    <div id="evaluator-buttons"></div>
+  </div>
+
+  <div id="page-rating" class="hidden">
+    <h2 id="rating-title"></h2>
+    <div id="rating-form"></div>
+    <button onclick="saveRatings()">Uložit hodnocení</button>
+    <button onclick="goToResults()">Zobrazit výsledky</button>
+  </div>
+
+  <div id="page-results" class="hidden">
+    <h2>Výsledky</h2>
+    <div id="results-table"></div>
+    <button onclick="goToStart()">Zpět na úvod</button>
+  </div>
+</div>
+</body>
+</html>
