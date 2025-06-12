@@ -108,7 +108,13 @@
           continue;
         }
 
-        const numericVal = parseFloat(val);
+if (!val || isNaN(parseFloat(val))) {
+  // smazat záznam
+} else {
+  const numericVal = parseFloat(val);
+  // uložit jako číslo
+}
+        
         newRatings.push({
           trida: selectedClass,
           hodnotitel: selectedEvaluator,
