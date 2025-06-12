@@ -110,19 +110,23 @@
         }
 
         const numericVal = parseFloat(val);
+        const payload = {
+          trida: selectedClass,
+          hodnotitel: selectedEvaluator,
+          zaktarget: student,
+          hodnoceni: numericVal
+        };
+
+        console.log("Odesílám do Supabase:", payload);
+
         const { error } = await supabase
           .from('ratings')
-          .upsert({
-            trida: selectedClass,
-            hodnotitel: selectedEvaluator,
-            zaktarget: student,
-            hodnoceni: numericVal
-          });
+          .upsert(payload);
 
         if (error) {
           console.error(`Chyba při ukládání záznamu pro ${student}:`, error);
         } else {
-          console.log(`Záznam pro ${student} uložen s hodnotou: ${numericVal}`);
+          console.log(`OK: Záznam pro ${student} uložen.`);
         }
       }
       alert("Hodnocení uloženo.");
