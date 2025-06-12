@@ -80,7 +80,7 @@
             option.textContent = val || "--";
             select.appendChild(option);
           });
-          select.value = existingRatings[student] !== undefined ? String(existingRatings[student]) : "";
+          select.value = existingRatings[student] !== undefined ? Number(existingRatings[student]).toFixed(1) : "";
           select.id = `rating-${student}`
           div.appendChild(label);
           div.appendChild(select);
@@ -182,7 +182,7 @@
 </head>
 <body>
 <div class="container">
-  <h1>Hodnocení žáků – verze 3</h1>
+  <h1>Hodnocení žáků – verze 4</h1>
 
   <div id="page-start">
     <h2>Zvolte třídu</h2>
