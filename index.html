@@ -11,6 +11,7 @@
     table { width: 100%; border-collapse: collapse; margin-top: 1em; }
     th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
     .container { max-width: 600px; margin: auto; }
+    .error { color: red; font-weight: bold; }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -59,29 +60,35 @@
       selectedEvaluator = name;
       document.getElementById("rating-title").textContent = `Hodnocení žáků třídy ${selectedClass} hodnotitelem ${name}`;
       const form = document.getElementById("rating-form");
-      form.innerHTML = "";
-      db.ref(`ratings/${selectedClass}`).once("value", snapshot => {
-        const classData = snapshot.val() || {};
-        students[selectedClass].forEach(student => {
-          const div = document.createElement("div");
-          const label = document.createElement("label");
-          label.textContent = student;
-          const select = document.createElement("select");
-          ratings.forEach(val => {
-            const option = document.createElement("option");
-            option.value = val;
-            option.textContent = val || "--";
-            select.appendChild(option);
+      form.innerHTML = "Načítání dat...";
+
+      db.ref(`ratings/${selectedClass}`).once("value")
+        .then(snapshot => {
+          const classData = snapshot.val() || {};
+          form.innerHTML = "";
+          students[selectedClass].forEach(student => {
+            const div = document.createElement("div");
+            const label = document.createElement("label");
+            label.textContent = student;
+            const select = document.createElement("select");
+            ratings.forEach(val => {
+              const option = document.createElement("option");
+              option.value = val;
+              option.textContent = val || "--";
+              select.appendChild(option);
+            });
+            const saved = classData[student]?.[selectedEvaluator] || "";
+            if (saved) select.value = saved;
+            select.id = `rating-${student}`;
+            div.appendChild(label);
+            div.appendChild(select);
+            form.appendChild(div);
           });
-          const saved = classData[student]?.[selectedEvaluator] || "";
-          if (saved) select.value = saved;
-          select.id = `rating-${student}`;
-          div.appendChild(label);
-          div.appendChild(select);
-          form.appendChild(div);
+          show("page-rating");
+        })
+        .catch(error => {
+          form.innerHTML = `<p class="error">Chyba při načítání dat: ${error.message}</p>`;
         });
-        show("page-rating");
-      });
     }
 
     window.saveRatings = function() {
