@@ -2,20 +2,20 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hodnocení žáků</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hodnocení žáků – verze 8</title>
   <style>
     body { font-family: sans-serif; padding: 1em; }
-    button, select { margin: 0.5em 0; font-size: 1em; padding: 0.5em; }
     .hidden { display: none; }
-    table { width: 100%; border-collapse: collapse; margin-top: 1em; }
-    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
     .container { max-width: 800px; margin: auto; }
-    .rating-group { display: flex; flex-direction: column; margin-bottom: 1.5em; }
+    .rating-group { margin-bottom: 1.5em; }
     .student-name { font-weight: bold; margin-bottom: 0.5em; }
-    .rating-row { display: flex; gap: 0.5em; flex-wrap: wrap; justify-content: flex-start; }
+    .rating-row { display: flex; flex-wrap: wrap; gap: 0.5em; }
     .rating-cell { display: flex; flex-direction: column; align-items: center; min-width: 60px; }
     .rating-cell .category { font-size: 0.75em; text-align: center; margin-bottom: 0.2em; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: center; }
+    button, select { margin: 0.5em 0; font-size: 1em; padding: 0.5em; }
     .error { color: red; font-weight: bold; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -30,13 +30,25 @@
       "3.N": ["Jakubíková", "Kasho", "Kašparcová", "Kotásková", "Marková", "Mórová", "Nespjaková", "Olšák", "Poláčková", "Šmíd", "Vaňousová", "Zelyczová"].sort(),
       "2.DN": ["Bláhová", "Bukovský", "Eisnerová", "Foryová", "Holienková", "Janatková", "Kodad", "Košata", "Matějíková", "Matys", "Nováková", "Otradovcová", "Vokalová"].sort(),
     };
+    const fullNames = {
+      "3.N": {
+        "Jakubíková": "Nikola", "Kasho": "Marharita", "Kašparcová": "Eliška", "Kotásková": "Mariana",
+        "Marková": "Marta", "Mórová": "Kateřina", "Nespjaková": "Klára", "Olšák": "Barunka",
+        "Poláčková": "Nikol", "Šmíd": "Václav František", "Vaňousová": "Tereza", "Zelyczová": "Anna"
+      },
+      "2.DN": {
+        "Bláhová": "", "Bukovský": "Mikuláš", "Eisnerová": "Berta", "Foryová": "Alena",
+        "Holienková": "Natálie", "Janatková": "Barbora", "Kodad": "Matouš", "Košata": "Jakub",
+        "Matějíková": "Tereza", "Matys": "Vojtěch", "Nováková": "Jana", "Otradovcová": "Nikola", "Vokalová": "Bára"
+      }
+    };
     const ratings = ["", "1.0", "1.5", "2.0", "2.5", "3.0", "3.5", "4.0", "4.5", "5.0"];
     const categories = ["návrh", "model", "katalog", "tech.", "obhajoba"];
     let selectedClass = "";
     let selectedEvaluator = "";
 
     function show(id) {
-      document.querySelectorAll("#page-start, #page-select-evaluator, #page-rating, #page-results").forEach(e => e.classList.add("hidden"));
+      document.querySelectorAll(".page").forEach(e => e.classList.add("hidden"));
       document.getElementById(id).classList.remove("hidden");
     }
 
@@ -47,7 +59,7 @@
       evaluators.forEach(name => {
         const btn = document.createElement("button");
         btn.textContent = name;
-        btn.onclick = function () { selectEvaluator(name); };
+        btn.onclick = () => selectEvaluator(name);
         container.appendChild(btn);
       });
       show("page-select-evaluator");
@@ -60,78 +72,54 @@
       form.innerHTML = "Načítání dat...";
       show("page-rating");
 
-      try {
-        const res = await supabase
-          .from('ratings')
-          .select('*')
-          .eq('trida', selectedClass)
-          .eq('hodnotitel', selectedEvaluator);
+      const res = await supabase.from('ratings').select('*').eq('trida', selectedClass).eq('hodnotitel', selectedEvaluator);
+      const existingRatings = {};
+      res.data?.forEach(row => { existingRatings[row.zaktarget] = row; });
+      form.innerHTML = "";
 
-        if (res.error) throw res.error;
+      students[selectedClass].forEach(student => {
+        const group = document.createElement("div");
+        group.className = "rating-group";
 
-        const existingRatings = {};
-        res.data.forEach(row => {
-          existingRatings[row.zaktarget] = row;
-        });
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "student-name";
+        nameDiv.textContent = `${student} ${fullNames[selectedClass]?.[student] || ""}`;
+        group.appendChild(nameDiv);
 
-        form.innerHTML = "";
-        students[selectedClass].forEach(student => {
-          const group = document.createElement("div");
-          group.className = "rating-group";
+        const row = document.createElement("div");
+        row.className = "rating-row";
 
-          const name = document.createElement("div");
-          name.className = "student-name";
-          name.textContent = student;
-          group.appendChild(name);
-
-          const row = document.createElement("div");
-          row.className = "rating-row";
-
-          categories.forEach(cat => {
-            const cell = document.createElement("div");
-            cell.className = "rating-cell";
-
-            const span = document.createElement("span");
-            span.className = "category";
-            span.textContent = cat;
-            cell.appendChild(span);
-
-            const select = document.createElement("select");
-            select.id = `rating-${student}-${cat}`;
-            ratings.forEach(val => {
-              const option = document.createElement("option");
-              option.value = val;
-              option.textContent = val || "--";
-              select.appendChild(option);
-            });
-            if (existingRatings[student] && existingRatings[student][cat] !== null) {
-              select.value = Number(existingRatings[student][cat]).toFixed(1);
-            }
-            cell.appendChild(select);
-            row.appendChild(cell);
+        categories.forEach(cat => {
+          const cell = document.createElement("div");
+          cell.className = "rating-cell";
+          const span = document.createElement("span");
+          span.className = "category";
+          span.textContent = cat;
+          const select = document.createElement("select");
+          select.id = `rating-${student}-${cat}`;
+          ratings.forEach(val => {
+            const option = document.createElement("option");
+            option.value = val;
+            option.textContent = val || "--";
+            select.appendChild(option);
           });
-
-          group.appendChild(row);
-          form.appendChild(group);
+          if (existingRatings[student] && existingRatings[student][cat] !== null) {
+            select.value = Number(existingRatings[student][cat]).toFixed(1);
+          }
+          cell.appendChild(span);
+          cell.appendChild(select);
+          row.appendChild(cell);
         });
-      } catch (err) {
-        form.innerHTML = `<p class='error'>Chyba při načítání: ${err.message}</p>`;
-        console.error("Chyba při načítání dat:", err);
-      }
+        group.appendChild(row);
+        form.appendChild(group);
+      });
     }
 
     window.saveRatings = async function() {
       const newRatings = [];
-
       for (const student of students[selectedClass]) {
-        const ratingObj = {
-          trida: selectedClass,
-          hodnotitel: selectedEvaluator,
-          zaktarget: student
-        };
-
+        const ratingObj = { trida: selectedClass, hodnotitel: selectedEvaluator, zaktarget: student };
         let hasValue = false;
-
         categories.forEach(cat => {
           const val = document.getElementById(`rating-${student}-${cat}`).value;
           const parsed = parseFloat(val);
@@ -142,47 +130,72 @@
             ratingObj[cat] = null;
           }
         });
-
         if (hasValue) newRatings.push(ratingObj);
       }
-
       if (newRatings.length > 0) {
-        const { error } = await supabase
-          .from('ratings')
-          .upsert(newRatings, { onConflict: ['trida', 'hodnotitel', 'zaktarget'] });
-        if (error) {
-          console.error(`Chyba při ukládání hodnocení:`, error.message || JSON.stringify(error));
-        }
+        await supabase.from('ratings').upsert(newRatings, { onConflict: ['trida', 'hodnotitel', 'zaktarget'] });
       }
-
       alert("Hodnocení uloženo.");
     }
 
-    window.goToResults = function () {
-      alert("Zobrazit výsledky – funkce ještě není implementována ve verzi 7");
+    window.goToResults = async function() {
+      show("page-results");
+      const div = document.getElementById("results-tables");
+      div.innerHTML = "";
+      const { data, error } = await supabase.from('ratings').select('*');
+      if (error) return div.innerHTML = `<p class='error'>Chyba: ${error.message}</p>`;
+
+      for (const cls of Object.keys(students)) {
+        const table = document.createElement("table");
+        const header = table.insertRow();
+        header.insertCell().textContent = "Příjmení";
+        categories.forEach(cat => header.insertCell().textContent = cat);
+
+        students[cls].forEach(student => {
+          const row = table.insertRow();
+          row.insertCell().textContent = student;
+          categories.forEach(cat => {
+            const vals = data.filter(r => r.trida === cls && r.zaktarget === student && r[cat] !== null).map(r => Number(r[cat]));
+            const avg = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : "--";
+            row.insertCell().textContent = avg;
+          });
+        });
+        const title = document.createElement("h3");
+        title.textContent = `Třída ${cls}`;
+        div.appendChild(title);
+        div.appendChild(table);
+      }
     }
+
+    function goToStart() { show("page-start"); }
   </script>
 </head>
 <body>
 <div class="container">
-  <h1>Hodnocení žáků – verze 7</h1>
+  <h1>Hodnocení žáků – verze 8</h1>
 
-  <div id="page-start">
+  <div id="page-start" class="page">
     <h2>Zvolte třídu</h2>
     <button onclick="selectClass('3.N')">3.N</button>
     <button onclick="selectClass('2.DN')">2.DN</button>
   </div>
 
-  <div id="page-select-evaluator" class="hidden">
+  <div id="page-select-evaluator" class="page hidden">
     <h2>Zvolte hodnotícího</h2>
     <div id="evaluator-buttons"></div>
   </div>
 
-  <div id="page-rating" class="hidden">
+  <div id="page-rating" class="page hidden">
     <h2 id="rating-title"></h2>
     <div id="rating-form"></div>
     <button onclick="saveRatings()">Uložit hodnocení</button>
     <button onclick="goToResults()">Zobrazit výsledky</button>
+  </div>
+
+  <div id="page-results" class="page hidden">
+    <h2>Výsledky hodnocení</h2>
+    <div id="results-tables"></div>
+    <button onclick="goToStart()">Zpět na úvod</button>
   </div>
 </div>
 </body>
