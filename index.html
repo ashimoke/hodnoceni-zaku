@@ -102,7 +102,7 @@
             .match({ trida: selectedClass, hodnotitel: selectedEvaluator, zaktarget: student });
 
           if (error) {
-            console.error(`Chyba při mazání záznamu pro ${student}:`, error);
+            console.error(`Chyba při mazání záznamu pro ${student}: ${error.message || JSON.stringify(error)}`);
           } else {
             console.log(`Záznam pro ${student} byl smazán.`);
           }
@@ -124,7 +124,7 @@
           .upsert(payload);
 
         if (error) {
-          console.error(`Chyba při ukládání záznamu pro ${student}:`, error);
+          console.error(`Chyba při ukládání záznamu pro ${student}: ${error.message || JSON.stringify(error)}`);
         } else {
           console.log(`OK: Záznam pro ${student} uložen.`);
         }
