@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hodnocení žáků – verze 8</title>
   <style>
     body { font-family: sans-serif; padding: 1em; }
     .hidden { display: none; }
@@ -129,7 +130,7 @@
             ratingObj[cat] = null;
           }
         });
-        if (hasValue) newRatings.push(ratingObj);
+        newRatings.push(ratingObj);
       }
       if (newRatings.length > 0) {
         await supabase.from('ratings').upsert(newRatings, { onConflict: ['trida', 'hodnotitel', 'zaktarget'] });
@@ -171,6 +172,7 @@
 </head>
 <body>
 <div class="container">
+  <h1>Hodnocení žáků – verze 8</h1>
 
   <div id="page-start" class="page">
     <h2>Zvolte třídu</h2>
